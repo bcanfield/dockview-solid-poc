@@ -111,9 +111,10 @@ if [ -n "$POP" ]; then
   check "popout: holds only the group, app not booted" "$(ev "[...document.querySelectorAll('.dv-tab')].map(t=>t.textContent.trim()).join() + '|' + !!document.querySelector('.text-button')")" "Panel 6|false"
   clk "($ICON)('add')[0].closest('.action')"
   check "popout: Solid '+' click works inside the popout" "$(ev "$TABS")" 2
-  clk "document.querySelector('[title=\"Close Window\"]')"
+  # Read the popout's console before Close Window shuts it
   POP_ERRS=$(agent-browser console 2>&1 | grep -iE '^\[(error|warning)\]')
   check "popout: no console errors or warnings" "${POP_ERRS:-none}" none
+  clk "document.querySelector('[title=\"Close Window\"]')"
   agent-browser tab "$MAIN" >/dev/null 2>&1; agent-browser wait 500 >/dev/null 2>&1
   check "popout: Close Window moves the group back (8 + 1 added in popout)" "$(ev "!!($TAB)('Panel 6') && $TABS")" 9
 fi

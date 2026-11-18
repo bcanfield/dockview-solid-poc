@@ -1,4 +1,4 @@
-// dockview-solid: copy this whole folder into your project. Needs only `dockview-core` and Solid.
+// dockview-solid: copy this whole folder into your project. See the header of Dockview.tsx for what it needs.
 // Each function here builds one of dockview-core's renderer objects and mounts a Solid component into it.
 import { createRoot, createSignal, runWithOwner, type Component, type Owner } from "solid-js";
 import { insert, registerDelegatedRoot, unregisterDelegatedRoot } from "@solidjs/web";
