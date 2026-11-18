@@ -1,5 +1,6 @@
 // dockview-solid: copy this whole folder into your project. Needs `dockview-core` and Solid, plus the stylesheet
 // from the `dockview` package (no React inside): import "dockview/dist/styles/dockview.css" once in your app.
+// Popout groups also need an empty page at dockview's `popoutUrl` (default /popout.html), e.g. public/popout.html.
 import { getOwner, onSettled, type Component } from "solid-js";
 import { createDockview, type DockviewApi, type DockviewComponentOptions } from "dockview-core";
 import {
@@ -11,8 +12,6 @@ import {
   type PanelProps,
 } from "./renderers";
 
-type Created = `create${string}`;
-
 /** All props are read once, when the layout is created; change the layout afterwards through the api from `onReady`. */
 export type DockviewProps = {
   /** Panel content components, keyed by the `component` name given to `api.addPanel`. */
@@ -23,7 +22,7 @@ export type DockviewProps = {
   /** Called once with the dockview api, after the layout element is in the page. */
   onReady: (api: DockviewApi) => void;
   /** Any other dockview-core option (theme, getTabContextMenuItems, ...), passed through unchanged. */
-  options?: Omit<DockviewComponentOptions, Created>;
+  options?: Omit<DockviewComponentOptions, `create${string}`>;
   class?: string;
 };
 
@@ -46,10 +45,18 @@ export function Dockview(props: DockviewProps) {
       createLeftHeaderActionComponent: header(props.leftHeaderActions),
       createRightHeaderActionComponent: header(props.rightHeaderActions),
       createPrefixHeaderActionComponent: header(props.prefixHeaderActions),
+      // dockview types `component` as unknown; returning undefined skips an item that isn't a component
       createContextMenuItemComponent: ({ component }) =>
-        contextMenuItemRenderer(component as Component<ContextMenuItemProps>, owner),
+        typeof component === "function"
+          ? contextMenuItemRenderer(component as Component<ContextMenuItemProps>, owner)
+          : undefined,
     });
-    props.onReady(api);
+    try {
+      props.onReady(api);
+    } catch (err) {
+      api.dispose(); // otherwise the layout's DOM and window listeners outlive the component
+      throw err;
+    }
     return () => api.dispose();
   });
 

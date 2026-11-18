@@ -11,6 +11,7 @@ const components = {
   default: (props: PanelProps) => (
     <div style={{ height: "100%", overflow: "auto", color: "white", position: "relative" }}>
       <span
+        data-testid="panel-title"
         style={{
           position: "absolute",
           top: "50%",
@@ -70,6 +71,8 @@ export default function DockviewDemo() {
   // No unsubscribe needed: <Dockview> disposes the api, and its emitters with it, on unmount
   const onReady = (dockApi: DockviewApi) => {
     setApi(() => dockApi);
+    // Dev builds only: lets scripts/check-demo.sh drive the api directly
+    if (import.meta.env.DEV) (window as any).dockviewApi = dockApi;
     addLogLine("Dockview Is Ready");
     dockApi.onDidAddPanel((e) => { setPanels((p) => [...p, e.id]); addLogLine(`Panel Added ${e.id}`); });
     dockApi.onDidActivePanelChange((e) => { setActivePanel(e.panel?.id); addLogLine(`Panel Activated ${e.panel?.id}`); });

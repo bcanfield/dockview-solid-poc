@@ -16,7 +16,7 @@ reload(){ agent-browser reload >/dev/null 2>&1; agent-browser wait 1500 >/dev/nu
 TABS="document.querySelectorAll('.dv-tab').length"
 NGROUPS="document.querySelectorAll('.dv-groupview').length"
 ICON="(name) => [...document.querySelectorAll('.group-control .material-symbols-outlined')].filter(s=>s.textContent===name)"
-TITLES="[...document.querySelectorAll('span[style*=\"42px\"]')].filter(s=>s.offsetParent)"
+TITLES="[...document.querySelectorAll('[data-testid=panel-title]')].filter(s=>s.offsetParent)"
 VIS="[...document.querySelectorAll('.dv-groupview')].filter(g=>{const r=g.getBoundingClientRect(); return r.width>0&&r.height>0})"
 LOG="[...document.querySelector('[data-testid=log]').children]"
 BUTTON="(text) => [...document.querySelectorAll('.text-button')].find(b=>b.textContent.trim()===text)"
@@ -62,6 +62,13 @@ check "panel bar close: panel_3 button gone" "$(ev "[...document.querySelectorAl
 check "log: 'Panel Removed panel_3' logged" "$(ev "$LOG.some(c=>c.textContent.includes('Panel Removed panel_3'))")" true
 clk "[...document.querySelectorAll('.demo-button')].find(b=>b.textContent==='panel_5')"
 check "panel bar focus: panel_5 selected" "$(ev "[...document.querySelectorAll('.demo-button.selected')].some(b=>b.textContent==='panel_5')")" true
+FLOATS_BEFORE=$(ev "document.querySelectorAll('.dv-resize-container').length")
+clk "($PANEL_ACTION)('panel_7', 0)"
+check "panel bar float: panel_7 floated" "$(ev "document.querySelectorAll('.dv-resize-container').length")" $((FLOATS_BEFORE+1))
+
+# The glue's title path: api.setTitle must reach the Solid panel through onDidTitleChange
+ev "dockviewApi.getPanel('panel_5').api.setTitle('Renamed 5')" >/dev/null; agent-browser wait 200 >/dev/null 2>&1
+check "setTitle: panel content shows the new title" "$(ev "$TITLES.some(s=>s.textContent==='Renamed 5')")" true
 
 clk "($TAB)('Panel 8')"
 # The highlighted numeric button in the group bar is the active group: Panel 8's
@@ -71,7 +78,7 @@ clk "($GROUP_ACTION)(2)"
 # Grid groups only: the floating group from the context-menu step stays on screen, as dockview intends
 check "group bar maximize: only Panel 8's grid group visible" "$(ev "$VIS.filter(g=>!g.closest('.dv-resize-container')).map(g=>g.querySelector('.dv-tab').textContent.trim()).join()")" "Panel 8"
 clk "($GROUP_ACTION)(2)"
-check "group bar maximize again: restored" "$(ev "$VIS.length>1")" true
+check "group bar maximize again: restored" "$(ev "$VIS.filter(g=>!g.closest('.dv-resize-container')).length>1")" true
 NGROUPS_BEFORE=$(ev "$NGROUPS")
 clk "($GROUP_ACTION)(3)"
 check "group bar close: one group fewer" "$(ev "$NGROUPS")" $((NGROUPS_BEFORE-1))
@@ -94,6 +101,7 @@ clk "($BUTTON)('Add Panel')"
 check "Add Panel: 9 tabs" "$(ev "$TABS")" 9
 
 clk "($BUTTON)('Reset')"
+MAIN=$(agent-browser tab list 2>&1 | grep '→' | grep -o 't[0-9]*' | head -1)
 clk "($TAB)('Panel 6').closest('.dv-groupview').querySelector('[title=\"Open In New Window\"]')"
 agent-browser wait 1500 >/dev/null 2>&1
 POP=$(agent-browser tab list 2>&1 | grep -o '\[t[0-9]*\][^\[]*popout.html' | grep -o 't[0-9]*' | head -1)
@@ -104,7 +112,9 @@ if [ -n "$POP" ]; then
   clk "($ICON)('add')[0].closest('.action')"
   check "popout: Solid '+' click works inside the popout" "$(ev "$TABS")" 2
   clk "document.querySelector('[title=\"Close Window\"]')"
-  agent-browser tab t1 >/dev/null 2>&1; agent-browser wait 500 >/dev/null 2>&1
+  POP_ERRS=$(agent-browser console 2>&1 | grep -iE '^\[(error|warning)\]')
+  check "popout: no console errors or warnings" "${POP_ERRS:-none}" none
+  agent-browser tab "$MAIN" >/dev/null 2>&1; agent-browser wait 500 >/dev/null 2>&1
   check "popout: Close Window moves the group back (8 + 1 added in popout)" "$(ev "!!($TAB)('Panel 6') && $TABS")" 9
 fi
 

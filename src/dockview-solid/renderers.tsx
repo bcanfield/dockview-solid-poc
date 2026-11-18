@@ -44,8 +44,9 @@ export type HeaderActionsProps = {
  */
 export type ContextMenuItemProps = IContextMenuItemComponentProps | IChipContextMenuItemComponentProps;
 
-// This is render() from @solidjs/web without its flush(). Solid 2 throws if flush() runs inside onSettled,
-// and dockview mounts parts synchronously wherever addPanel is called. Solid flushes on the next microtask anyway.
+// This is render() from @solidjs/web without its flush() and its `schedule: true`. Solid 2 throws if flush() runs
+// inside onSettled, and dockview mounts parts wherever addPanel is called. Without schedule the first insert runs
+// synchronously, so a part's DOM exists as soon as init returns, which dockview needs to measure it.
 function mount<P extends object>(Comp: Component<P>, props: P, element: HTMLElement, owner: Owner | null) {
   // Listeners sit on the element itself, so clicks keep working after dockview moves it into a popout window
   registerDelegatedRoot(element);
