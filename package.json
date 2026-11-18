@@ -1,0 +1,20 @@
+{
+  "name": "dockview-solid-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@solidjs/web": "^2.0.1",
+    "dockview": "8.9.1",
+    "dockview-core": "8.9.1",
+    "solid-js": "^2.0.1"
+  },
+  "devDependencies": {
+    "@solidjs/vite-plugin": "^3.0.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}
