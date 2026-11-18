@@ -31,7 +31,7 @@ const FloatMenuItem = (props: ContextMenuItemProps) => (
   <div
     class="dv-context-menu-item"
     onClick={() => {
-      props.api.addFloatingGroup(props.panel);
+      if ("panel" in props) props.api.addFloatingGroup(props.panel); // tab menu only; chip menus pass tabGroup
       props.close();
     }}
     style={{ display: "flex", "align-items": "center", gap: "6px" }}

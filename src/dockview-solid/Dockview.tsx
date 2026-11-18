@@ -1,4 +1,5 @@
-// dockview-solid: copy this whole folder into your project. Needs only `dockview-core` and Solid.
+// dockview-solid: copy this whole folder into your project. Needs `dockview-core` and Solid, plus the stylesheet
+// from the `dockview` package (no React inside): import "dockview/dist/styles/dockview.css" once in your app.
 import { getOwner, onSettled, type Component } from "solid-js";
 import { createDockview, type DockviewApi, type DockviewComponentOptions } from "dockview-core";
 import {
@@ -12,6 +13,7 @@ import {
 
 type Created = `create${string}`;
 
+/** All props are read once, when the layout is created; change the layout afterwards through the api from `onReady`. */
 export type DockviewProps = {
   /** Panel content components, keyed by the `component` name given to `api.addPanel`. */
   components: Record<string, Component<PanelProps<any>>>;

@@ -9,6 +9,7 @@ import type {
   DockviewGroupPanelApi,
   DockviewPanelApi,
   IContentRenderer,
+  IChipContextMenuItemComponentProps,
   IContextMenuItemComponentProps,
   IContextMenuItemRenderer,
   IDockviewPanel,
@@ -37,23 +38,35 @@ export type HeaderActionsProps = {
   readonly location: DockviewGroupLocation;
 };
 
-/** Props of a `{ component }` item returned from `getTabContextMenuItems`. */
-export type ContextMenuItemProps = IContextMenuItemComponentProps;
+/**
+ * Props of a `{ component }` menu item. Tab menus pass `panel`; tab-group chip menus
+ * (`getTabGroupChipContextMenuItems`) use the same factory and pass `tabGroup` instead.
+ */
+export type ContextMenuItemProps = IContextMenuItemComponentProps | IChipContextMenuItemComponentProps;
 
 // This is render() from @solidjs/web without its flush(). Solid 2 throws if flush() runs inside onSettled,
 // and dockview mounts parts synchronously wherever addPanel is called. Solid flushes on the next microtask anyway.
 function mount<P extends object>(Comp: Component<P>, props: P, element: HTMLElement, owner: Owner | null) {
   // Listeners sit on the element itself, so clicks keep working after dockview moves it into a popout window
   registerDelegatedRoot(element);
-  // runWithOwner keeps the app's context visible inside panels
-  const dispose = runWithOwner(owner, () =>
-    createRoot((d) => {
-      insert(element, () => <Comp {...props} />);
-      return d;
-    }),
-  );
+  let dispose: (() => void) | undefined;
+  try {
+    // runWithOwner keeps the app's context visible inside panels
+    runWithOwner(owner, () =>
+      createRoot((d) => {
+        dispose = d;
+        insert(element, () => <Comp {...props} />);
+      }),
+    );
+  } catch (err) {
+    // Same cleanup render() does when a component throws while mounting
+    dispose?.();
+    unregisterDelegatedRoot(element);
+    throw err;
+  }
+  // Calling this after Solid already disposed the root with <Dockview>'s owner is a harmless no-op
   return () => {
-    dispose();
+    dispose!();
     unregisterDelegatedRoot(element);
     element.textContent = "";
   };
@@ -76,7 +89,8 @@ export function panelRenderer(Comp: Component<PanelProps<any>>, owner: Owner | n
     element,
     init(p) {
       setParams(p.params ?? {});
-      setTitle(p.api.title);
+      // p.title, not p.api.title: dockview calls init before it sets the api's title
+      setTitle(p.title);
       titleSub = p.api.onDidTitleChange((e) => setTitle(e.title));
       const props = {
         get params() { return params(); },
@@ -87,7 +101,8 @@ export function panelRenderer(Comp: Component<PanelProps<any>>, owner: Owner | n
       dispose = mount(Comp, props, element, owner);
     },
     update(e) {
-      setParams((prev) => ({ ...prev, ...e.params }));
+      // dockview passes the full merged params (keys set to undefined already removed), so replace, don't merge
+      setParams(e.params);
     },
     dispose() {
       titleSub?.dispose();
@@ -148,7 +163,7 @@ export function contextMenuItemRenderer(Comp: Component<ContextMenuItemProps>, o
   return {
     element,
     init(p) {
-      dispose = mount(Comp, p as ContextMenuItemProps, element, owner);
+      dispose = mount(Comp, p, element, owner);
     },
     dispose() {
       dispose();
